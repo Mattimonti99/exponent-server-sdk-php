@@ -14,6 +14,11 @@ class Expo
     const EXPO_API_URL = 'https://exp.host/--/api/v2/push/send';
 
     /**
+     * Set to true to force FCM V1 protocol
+     */
+    private $forceFCMv1 = false;
+
+    /**
      * cURL handler
      *
      * @var null|resource
@@ -26,8 +31,8 @@ class Expo
      * @var ExpoRegistrar
      */
     private $registrar;
-    
-    /** 
+
+    /**
      * @var string|null
      */
     private $accessToken = null;
@@ -78,11 +83,12 @@ class Expo
     {
         return $this->registrar->removeInterest($interest, $token);
     }
-    
+
     /**
      * @param string|null $accessToken
      */
-    public function setAccessToken(string $accessToken = null) {
+    public function setAccessToken(string $accessToken = null)
+    {
         $this->accessToken = $accessToken;
     }
 
@@ -93,10 +99,10 @@ class Expo
      * @param array $data
      * @param bool $debug
      *
-     * @throws ExpoException
+     * @return array|bool
      * @throws UnexpectedResponseException
      *
-     * @return array|bool
+     * @throws ExpoException
      */
     public function notify(array $interests, array $data, $debug = false)
     {
@@ -152,17 +158,17 @@ class Expo
     /**
      * Sets the request url and headers
      *
+     * @return null|resource
      * @throws ExpoException
      *
-     * @return null|resource
      */
     private function prepareCurl()
     {
         $ch = $this->getCurl();
 
         $headers = [
-                'accept: application/json',
-                'content-type: application/json',
+            'accept: application/json',
+            'content-type: application/json',
         ];
 
         if ($this->accessToken) {
@@ -170,7 +176,12 @@ class Expo
         }
 
         // Set cURL opts
-        curl_setopt($ch, CURLOPT_URL, self::EXPO_API_URL);
+        if ($this->forceFCMv1) {
+            curl_setopt($ch, CURLOPT_URL, self::EXPO_API_URL . '?' . http_build_query(array('useFcmV1' => "true"), PHP_QUERY_RFC3986));
+        } else {
+            curl_setopt($ch, CURLOPT_URL, self::EXPO_API_URL);
+        }
+
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -181,11 +192,12 @@ class Expo
     /**
      * Handle with unexpected response error
      *
+     * @return null|resource
      * @throws UnexpectedResponseException
      *
-     * @return null|resource
      */
-    private function handleWithUnexpectedResponse($response) {
+    private function handleWithUnexpectedResponse($response)
+    {
         if (is_array($response) && isset($response['body'])) {
             $errors = json_decode($response['body'])->errors ?? [];
 
@@ -198,9 +210,9 @@ class Expo
     /**
      * Get the cURL resource
      *
+     * @return null|resource
      * @throws ExpoException
      *
-     * @return null|resource
      */
     public function getCurl()
     {
@@ -220,9 +232,9 @@ class Expo
      *
      * @param $ch
      *
+     * @return array
      * @throws UnexpectedResponseException
      *
-     * @return array
      */
     private function executeCurl($ch)
     {
@@ -233,12 +245,22 @@ class Expo
 
         $responseData = json_decode($response['body'], true)['data'] ?? null;
 
-        if (! is_array($responseData)) {
+        if (!is_array($responseData)) {
             throw new UnexpectedResponseException(
                 $this->handleWithUnexpectedResponse($response)
             );
         }
 
         return $responseData;
+    }
+
+    /**
+     * Forces the FCM V1 protocol
+     *
+     * @return void
+     */
+    public function forceFCMv1Protocol()
+    {
+        $this->forceFCMv1 = true;
     }
 }
