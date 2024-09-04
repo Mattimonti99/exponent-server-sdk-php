@@ -175,13 +175,14 @@ class Expo
             $headers[] = sprintf('Authorization: Bearer %s', $this->accessToken);
         }
 
+        $url = self::EXPO_API_URL;
+
         // Set cURL opts
         if ($this->forceFCMv1) {
-            curl_setopt($ch, CURLOPT_URL, self::EXPO_API_URL . '?' . http_build_query(array('useFcmV1' => "true"), PHP_QUERY_RFC3986));
-        } else {
-            curl_setopt($ch, CURLOPT_URL, self::EXPO_API_URL);
+            $url .= '?useFcmV1=true';
         }
 
+        curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
